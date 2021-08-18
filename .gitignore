@@ -133,3 +133,6 @@ data
 
 # MAC OS
 .DS_store
+
+# VS Code
+.vscode
