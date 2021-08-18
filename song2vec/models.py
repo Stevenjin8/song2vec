@@ -9,8 +9,10 @@ Base = declarative_base()
 track_playlist_association = Table(
     "association",
     Base.metadata,
-    Column("track_uri", ForeignKey("track.uri")),
-    Column("playlist_id", ForeignKey("playlist.pid")),
+    Column("track_uri", ForeignKey("track.uri", ondelete="CASCADE"), nullable=False),
+    Column(
+        "playlist_id", ForeignKey("playlist.pid", ondelete="CASCADE"), nullable=False
+    ),
 )
 
 
@@ -26,8 +28,10 @@ class Artist(Base):
     __tablename__ = "artist"
 
     uri = Column(String, primary_key=True)
-    name = Column(String)
-    tracks = relationship("Track", back_populates="artist")
+    name = Column(String, nullable=False)
+    tracks = relationship(
+        "Track", back_populates="artist", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<{self.__class__.__name__} ID: {self.uri}, NAME: {self.name}>"
@@ -86,6 +90,7 @@ class Playlist(Base):
 
 class Album(Base):
     """Just what it sounds like.
+    No `Artist` field because not sure if all albums have a single artist.
 
     Fields:
         uri (String): unique identifier.
@@ -97,4 +102,4 @@ class Album(Base):
 
     uri = Column(String, primary_key=True)
     name = Column(String)
-    tracks = relationship("Track", back_populates="album")
+    tracks = relationship("Track", back_populates="album", cascade="all, delete-orphan")
