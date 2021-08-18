@@ -136,3 +136,6 @@ data
 
 # VS Code
 .vscode
+
+# Jupyter
+notebooks
