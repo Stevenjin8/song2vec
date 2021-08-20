@@ -47,29 +47,40 @@ def load_playlists(raw_data_dir: str, db_url: str):
     # nonexistent foreign keys, which is why we can upload everything at the same time
     # without integrity errors.
     filenames = load.get_slices(raw_data_dir)
-    artist_process = multiprocessing.Process(
-        target=load_objects,
-        args=(db_url, filenames, create_artists),
+    processes = []
+    processes.append(
+        multiprocessing.Process(
+            target=load_objects,
+            args=(db_url, filenames, create_artists),
+        )
     )
-    album_process = multiprocessing.Process(
-        target=load_objects, args=(db_url, filenames, create_albums)
+    processes.append(
+        multiprocessing.Process(
+            target=load_objects, args=(db_url, filenames, create_albums)
+        )
     )
-    track_process = multiprocessing.Process(
-        target=load_objects, args=(db_url, filenames, create_tracks)
+    processes.append(
+        multiprocessing.Process(
+            target=load_objects, args=(db_url, filenames, create_tracks)
+        )
     )
-    playlist_process = multiprocessing.Process(
-        target=load_objects,
-        args=(db_url, filenames, create_playlists),
+    processes.append(
+        multiprocessing.Process(
+            target=load_objects,
+            args=(db_url, filenames, create_playlists),
+        )
     )
-    association_process = multiprocessing.Process(
-        target=load_playlist_track_association, args=(db_url, filenames)
+    processes.append(
+        multiprocessing.Process(
+            target=load_playlist_track_association, args=(db_url, filenames)
+        )
     )
 
-    artist_process.start()
-    album_process.start()
-    track_process.start()
-    playlist_process.start()
-    association_process.start()
+    for process in processes:
+        process.start()
+
+    for process in processes:
+        process.join()
 
 
 cli.add_command(load_playlists)

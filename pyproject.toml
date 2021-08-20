@@ -24,3 +24,6 @@ coverage = "^5.5"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+song2vec = 'song2vec.cli.__main__:cli'

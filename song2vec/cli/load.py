@@ -23,7 +23,7 @@ def get_slices(raw_data_dir: str) -> List[str]:
 
 def create_artists(
     playlists: List[dict], artist_uris: Set[str]
-) -> Generator[models.Artist]:
+) -> Generator[models.Artist, None, None]:
     """Create objects representing the artists in the database.
 
     Arguments:
@@ -36,7 +36,7 @@ def create_artists(
     """
     for playlist in playlists:
         for track in playlist["tracks"]:
-            uri = track["artist_uri"]
+            uri = track["artist_uri"].split(":")[-1]
             name = track["artist_name"]
             if uri not in artist_uris:
                 artist_uris.add(uri)
@@ -45,7 +45,7 @@ def create_artists(
 
 def create_albums(
     playlists: List[dict], album_uris: Set[str]
-) -> Generator[models.Album]:
+) -> Generator[models.Album, None, None]:
     """Create objects representing the albums in the database.
 
     Arguments:
@@ -58,7 +58,7 @@ def create_albums(
     """
     for playlist in playlists:
         for track in playlist["tracks"]:
-            uri = track["album_uri"]
+            uri = track["album_uri"].split(":")[-1]
             name = track["album_name"]
             if uri not in album_uris:
                 album_uris.add(uri)
@@ -67,7 +67,7 @@ def create_albums(
 
 def create_tracks(
     playlists: List[dict], track_uris: Set[str]
-) -> Generator[models.Track]:
+) -> Generator[models.Track, None, None]:
     """Create objects representing the tracks (i.e. songs) in the database.
 
     Arguments:
@@ -80,7 +80,7 @@ def create_tracks(
     """
     for playlist in playlists:
         for track in playlist["tracks"]:
-            uri = track["track_uri"]
+            uri = track["track_uri"].split(":")[-1]
             name = track["track_name"]
             album_uri = track["album_uri"]
             artist_uri = track["artist_uri"]
@@ -91,7 +91,9 @@ def create_tracks(
                 )
 
 
-def create_playlists(playlists: List[dict], *_) -> Generator[models.Playlist]:
+def create_playlists(
+    playlists: List[dict], *_
+) -> Generator[models.Playlist, None, None]:
     """Create objects representing playlists in the dabase. No need to worry about
     duplicate playlists.
 
@@ -100,7 +102,8 @@ def create_playlists(playlists: List[dict], *_) -> Generator[models.Playlist]:
     """
     for playlist in playlists:
         name = playlist["name"]
-        yield models.Playlist(name=name)
+        pid = playlist["pid"]
+        yield models.Playlist(name=name, pid=pid)
 
 
 def load_objects(
