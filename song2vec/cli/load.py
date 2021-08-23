@@ -7,7 +7,7 @@ from typing import Callable, Generator, Iterable, List, Set
 
 import sqlalchemy
 from tqdm import tqdm
-from song2vec import models
+from song2vec import db
 
 from . import settings
 
@@ -23,7 +23,7 @@ def get_slices(raw_data_dir: str) -> List[str]:
 
 def create_artists(
     playlists: List[dict], artist_uris: Set[str]
-) -> Generator[models.Artist, None, None]:
+) -> Generator[db.Artist, None, None]:
     """Create objects representing the artists in the database.
 
     Arguments:
@@ -40,12 +40,12 @@ def create_artists(
             name = track["artist_name"]
             if uri not in artist_uris:
                 artist_uris.add(uri)
-                yield models.Artist(uri=uri, name=name)
+                yield db.Artist(uri=uri, name=name)
 
 
 def create_albums(
     playlists: List[dict], album_uris: Set[str]
-) -> Generator[models.Album, None, None]:
+) -> Generator[db.Album, None, None]:
     """Create objects representing the albums in the database.
 
     Arguments:
@@ -62,12 +62,12 @@ def create_albums(
             name = track["album_name"]
             if uri not in album_uris:
                 album_uris.add(uri)
-                yield models.Album(uri=uri, name=name)
+                yield db.Album(uri=uri, name=name)
 
 
 def create_tracks(
     playlists: List[dict], track_uris: Set[str]
-) -> Generator[models.Track, None, None]:
+) -> Generator[db.Track, None, None]:
     """Create objects representing the tracks (i.e. songs) in the database.
 
     Arguments:
@@ -82,18 +82,16 @@ def create_tracks(
         for track in playlist["tracks"]:
             uri = track["track_uri"].split(":")[-1]
             name = track["track_name"]
-            album_uri = track["album_uri"]
-            artist_uri = track["artist_uri"]
+            album_uri = track["album_uri"].split(":")[-1]
+            artist_uri = track["artist_uri"].split(":")[-1]
             if uri not in track_uris:
                 track_uris.add(uri)
-                yield models.Track(
+                yield db.Track(
                     uri=uri, name=name, album_uri=album_uri, artist_uri=artist_uri
                 )
 
 
-def create_playlists(
-    playlists: List[dict], *_
-) -> Generator[models.Playlist, None, None]:
+def create_playlists(playlists: List[dict], *_) -> Generator[db.Playlist, None, None]:
     """Create objects representing playlists in the dabase. No need to worry about
     duplicate playlists.
 
@@ -103,13 +101,13 @@ def create_playlists(
     for playlist in playlists:
         name = playlist["name"]
         pid = playlist["pid"]
-        yield models.Playlist(name=name, pid=pid)
+        yield db.Playlist(name=name, pid=pid)
 
 
 def load_objects(
     db_url: str,
     filenames: List[str],
-    create_objects: Callable[[List[dict], Set[str]], Iterable[models.Base]],
+    create_objects: Callable[[List[dict], Set[str]], Iterable[db.Base]],
 ) -> None:
     """Load objects into the database. This function is mostly here to get rid of
     boilerplate for multiprocessing.
@@ -142,7 +140,7 @@ def load_playlist_track_association(db_url: str, filenames: List[str]) -> None:
         db_url: the url of the database (e.g. "sqlite:///data/db").l
         filenames: list of file paths that contain the dataset.
     """
-    ins = models.track_playlist_association.insert()
+    ins = db.track_playlist_association.insert()
     engine = sqlalchemy.create_engine(db_url)
     ins.bind = engine
     conn = engine.connect()
@@ -154,6 +152,9 @@ def load_playlist_track_association(db_url: str, filenames: List[str]) -> None:
         for playlist in data_slice["playlists"]:
             for track in playlist["tracks"]:
                 relationships.append(
-                    {"track_uri": track["track_uri"], "playlist_id": playlist["pid"]}
+                    {
+                        "track_uri": track["track_uri"].split(":")[-1],
+                        "playlist_id": playlist["pid"],
+                    }
                 )
         conn.execute(ins, relationships)

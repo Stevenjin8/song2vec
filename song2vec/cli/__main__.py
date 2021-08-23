@@ -35,13 +35,13 @@ def cli():
 def load_playlists(raw_data_dir: str, db_url: str):
     """Load the Million Playlist Dataset into a SQLite database."""
     import sqlalchemy
-    from song2vec import models
+    from song2vec import db
 
     from . import load
 
     # Set up connection
     engine = sqlalchemy.create_engine(db_url)
-    models.Base.metadata.create_all(engine)
+    db.Base.metadata.create_all(engine)
 
     # Create processes to read files and upload objects. Note that SQLite allows for
     # nonexistent foreign keys, which is why we can upload everything at the same time
