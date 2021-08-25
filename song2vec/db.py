@@ -1,19 +1,27 @@
 """Object realtional mappings."""
 
-from sqlalchemy import Column, ForeignKey, Integer, String, Table
+from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
 # Intermediate table for many-to-many relationships between tracks and playlists.
-track_playlist_association = Table(
-    "association",
-    Base.metadata,
-    Column("track_uri", ForeignKey("track.uri", ondelete="CASCADE"), nullable=False),
-    Column(
-        "playlist_id", ForeignKey("playlist.pid", ondelete="CASCADE"), nullable=False
-    ),
-)
+class Association(Base):
+    __tablename__ = "association"
+    id = Column(Integer, primary_key=True)
+    track_uri = Column(
+        String,
+        ForeignKey("track.uri", ondelete="CASCADE"),
+        nullable=False,
+    )
+    playlist_id = Column(
+        String,
+        ForeignKey("playlist.pid", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    track = relationship("Track", back_populates="playlist_associations")
+    playlist = relationship("Playlist", back_populates="track_associations")
 
 
 class Artist(Base):
@@ -54,14 +62,12 @@ class Track(Base):
     uri = Column(String, primary_key=True)
     name = Column(String)
     duration = Column(Integer)
-    artist_uri = Column(String, ForeignKey("artist.uri"))
+    artist_uri = Column(String, ForeignKey("artist.uri", ondelete="CASCADE"))
     artist = relationship("Artist", back_populates="tracks")
-    album_uri = Column(String, ForeignKey("album.uri"))
+    album_uri = Column(String, ForeignKey("album.uri", ondelete="CASCADE"))
     album = relationship("Album", back_populates="tracks")
 
-    playlists = relationship(
-        "Playlist", secondary=track_playlist_association, back_populates="tracks"
-    )
+    playlist_associations = relationship("Association", back_populates="track")
 
     def __repr__(self):
         return f"<{self.__class__.__name__} URI: {self.uri}, NAME: {self.name}>"
@@ -80,9 +86,7 @@ class Playlist(Base):
 
     pid = Column(Integer, primary_key=True)
     name = Column(String)
-    tracks = relationship(
-        "Track", secondary=track_playlist_association, back_populates="playlists"
-    )
+    track_associations = relationship("Association", back_populates="playlist")
 
     def __repr__(self):
         return f"<{self.__class__.__name__} ID: {self.pid}, NAME: {self.name}>"
@@ -102,4 +106,4 @@ class Album(Base):
 
     uri = Column(String, primary_key=True)
     name = Column(String)
-    tracks = relationship("Track", back_populates="album", cascade="all, delete-orphan")
+    tracks = relationship("Track", back_populates="album")
