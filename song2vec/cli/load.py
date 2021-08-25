@@ -1,11 +1,14 @@
 """Functions to load data into the db. I think a functional approach makes more sense
 when processing data.
 """
+from itertools import chain
 import json
 import os
-from typing import Callable, Generator, Iterable, List, Set
+import sqlite3
+from typing import Callable, Generator, Iterable, List, Set, Type
 
 import sqlalchemy
+from sqlalchemy import sql
 from tqdm import tqdm
 from song2vec import db
 
@@ -40,7 +43,7 @@ def create_artists(
             name = track["artist_name"]
             if uri not in artist_uris:
                 artist_uris.add(uri)
-                yield db.Artist(uri=uri, name=name)
+                yield {"uri": uri, "name": name}
 
 
 def create_albums(
@@ -62,7 +65,7 @@ def create_albums(
             name = track["album_name"]
             if uri not in album_uris:
                 album_uris.add(uri)
-                yield db.Album(uri=uri, name=name)
+                yield {"uri": uri, "name": name}
 
 
 def create_tracks(
@@ -86,25 +89,44 @@ def create_tracks(
             artist_uri = track["artist_uri"].split(":")[-1]
             if uri not in track_uris:
                 track_uris.add(uri)
-                yield db.Track(
-                    uri=uri, name=name, album_uri=album_uri, artist_uri=artist_uri
-                )
+                yield {
+                    "uri": uri,
+                    "name": name,
+                    "album_uri": album_uri,
+                    "artist_uri": artist_uri,
+                }
 
 
 def create_playlists(playlists: List[dict], *_) -> Generator[db.Playlist, None, None]:
-    """Create objects representing playlists in the dabase. No need to worry about
+    """Create objects representing playlists in the database. No need to worry about
     duplicate playlists.
 
     Arguments:
-        playlists: A list of playlists as storefd in the Spotify dataset.
+        playlists: A list of playlists as stored in the Spotify dataset.
     """
     for playlist in playlists:
         name = playlist["name"]
         pid = playlist["pid"]
-        yield db.Playlist(name=name, pid=pid)
+        yield {"name": name, "pid": pid}
+
+
+def create_associations(
+    playlists: List[dict], *_
+) -> Generator[db.Association, None, None]:
+    """Create intermediate objects between artists and playlists.
+
+    Arguments:
+        playlists: A list of playlists as stored in the Spotify dataset.
+    """
+    for playlist in playlists:
+        for track in playlist["tracks"]:
+            track_uri = track["track_uri"].split(":")[-1]
+            playlist_id = playlist["pid"]
+            yield {"track_uri": track_uri, "playlist_id": playlist_id}
 
 
 def load_objects(
+    cls: db.Base,
     db_url: str,
     filenames: List[str],
     create_objects: Callable[[List[dict], Set[str]], Iterable[db.Base]],
@@ -118,43 +140,49 @@ def load_objects(
         create_objects: a callable like `create_albums`. Must take two arguments:
             a list of playlists and a set of strings (usually ids of already-created
             objects), and return Sqlalchemy ORM objects.
+        mapper: the object type.
     """
     ids = set()
-    engine = sqlalchemy.create_engine(db_url)
+    engine = sqlalchemy.create_engine(db_url, connect_args={"timeout": 10})
     # pylint: disable=invalid-name
     Session = sqlalchemy.orm.sessionmaker(bind=engine)
+    iterators = []
     for slice_path in tqdm(filenames):
         session = Session()
         with open(slice_path) as file:
             data_slice = json.load(file)
-        session.add_all(create_objects(data_slice["playlists"], ids))
+            # iterate through the generator so we don't keep all the files open.
+            objs = create_objects(data_slice["playlists"], ids)
+        session.bulk_insert_mappings(sqlalchemy.inspect(cls), objs)
         session.commit()
-        session.close()
+    session.close()
 
 
-def load_playlist_track_association(db_url: str, filenames: List[str]) -> None:
-    """Load relationships between playlists and tracks to the intermediate table. We
-    have to do this a bit differently because the intermediate table is not an ORM.
+def remove_unique_tracks(session: sqlalchemy.orm.Session) -> None:
+    """Remove tracks that only occur in one playlist and playlists that contain a single track."""
 
-    Arguments:
-        db_url: the url of the database (e.g. "sqlite:///data/db").l
-        filenames: list of file paths that contain the dataset.
-    """
-    ins = db.track_playlist_association.insert()
-    engine = sqlalchemy.create_engine(db_url)
-    ins.bind = engine
-    conn = engine.connect()
+    single_track_query = (
+        session.query(db.Association.track_uri)
+        .group_by(db.Association.track_uri)
+        .having(sqlalchemy.func.count(db.Association.playlist_id) <= 1)
+    )
 
-    for filename in tqdm(filenames):
-        with open(filename) as file:
-            data_slice = json.load(file)
-        relationships = []
-        for playlist in data_slice["playlists"]:
-            for track in playlist["tracks"]:
-                relationships.append(
-                    {
-                        "track_uri": track["track_uri"].split(":")[-1],
-                        "playlist_id": playlist["pid"],
-                    }
-                )
-        conn.execute(ins, relationships)
+    single_playlist_query = (
+        session.query(db.Association.track_uri)
+        .group_by(db.Association.playlist_id)
+        .having(sqlalchemy.func.count(db.Association.track_uri) <= 1)
+    )
+
+    while True:
+        session.query(db.Track).where(db.Track.uri.in_(single_track_query)).delete(
+            synchronize_session="fetch"
+        )
+        session.query(db.Playlist).where(
+            db.Playlist.pid.in_(single_playlist_query)
+        ).delete(synchronize_session="fetch")
+
+        session.commit()
+        session.flush()
+
+        if not single_playlist_query.limit(1).all():
+            break

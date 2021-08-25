@@ -4,14 +4,17 @@
 import multiprocessing
 
 import click
+from sqlalchemy.orm.session import sessionmaker
 from song2vec.cli.load import (
     create_albums,
     create_artists,
-    load_playlist_track_association,
+    create_associations,
     create_playlists,
     create_tracks,
     load_objects,
+    remove_unique_tracks,
 )
+from sqlalchemy import inspect
 
 
 @click.group()
@@ -32,7 +35,13 @@ def cli():
     default="sqlite:///data/db",
     help="URL to the database for Sqlalchemy (e.g. sqlite:///data/db)",
 )
-def load_playlists(raw_data_dir: str, db_url: str):
+@click.option(
+    "--remove-unique/--no-remove-unique",
+    type=bool,
+    default=False,
+    help="Make sure all tracks appear in multiple playlists and that all playlists have multiple tracks.",
+)
+def load_playlists(raw_data_dir: str, db_url: str, remove_unique: bool):
     """Load the Million Playlist Dataset into a SQLite database."""
     import sqlalchemy
     from song2vec import db
@@ -51,28 +60,29 @@ def load_playlists(raw_data_dir: str, db_url: str):
     processes.append(
         multiprocessing.Process(
             target=load_objects,
-            args=(db_url, filenames, create_artists),
+            args=(db.Artist, db_url, filenames, create_artists),
         )
     )
     processes.append(
         multiprocessing.Process(
-            target=load_objects, args=(db_url, filenames, create_albums)
+            target=load_objects, args=(db.Album, db_url, filenames, create_albums)
         )
     )
     processes.append(
         multiprocessing.Process(
-            target=load_objects, args=(db_url, filenames, create_tracks)
+            target=load_objects, args=(db.Track, db_url, filenames, create_tracks)
         )
     )
     processes.append(
         multiprocessing.Process(
             target=load_objects,
-            args=(db_url, filenames, create_playlists),
+            args=(db.Playlist, db_url, filenames, create_playlists),
         )
     )
     processes.append(
         multiprocessing.Process(
-            target=load_playlist_track_association, args=(db_url, filenames)
+            target=load_objects,
+            args=(db.Association, db_url, filenames, create_associations),
         )
     )
 
@@ -81,6 +91,14 @@ def load_playlists(raw_data_dir: str, db_url: str):
 
     for process in processes:
         process.join()
+
+    playlist_id_index = sqlalchemy.Index("playlist_id", db.Association.playlist_id)
+    track_uri_index = sqlalchemy.Index("track_uri", db.Association.track_uri)
+    playlist_id_index.create(bind=engine)
+    track_uri_index.create(bind=engine)
+
+    if remove_unique:
+        remove_unique_tracks(sessionmaker(bind=engine)())  # add this as an option.
 
 
 cli.add_command(load_playlists)
