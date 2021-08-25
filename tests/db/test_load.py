@@ -56,14 +56,14 @@ class LoadTestCase(AbstractDbTestCase):
         playlist_query = self.session.query(db.Playlist)
         self.assertGreater(playlist_query.count(), 0)
         for playlist in playlist_query:
-            self.assertTrue(playlist.tracks)
+            self.assertTrue(playlist.track_associations)
             self.assertTrue(playlist.name)
             self.assertIsNotNone(playlist.pid)
 
         track_query = self.session.query(db.Track)
         self.assertGreater(track_query.count(), 0)
         for track in track_query:
-            self.assertTrue(track.playlists)
+            self.assertTrue(track.playlist_associations)
             self.assertTrue(track.name)
             self.assertTrue(track.uri)
             self.assertTrue(track.album)
@@ -73,8 +73,8 @@ class LoadTestCase(AbstractDbTestCase):
         """Test that the values in the db are correct."""
         throwbacks = self.session.query(db.Playlist).filter(db.Playlist.pid == 0).one()
         self.assertEqual(throwbacks.name, "Throwbacks")
-        self.assertEqual(len(throwbacks.tracks), 1)
-        toxic = throwbacks.tracks[0]
+        self.assertEqual(len(throwbacks.track_associations), 1)
+        toxic = throwbacks.track_associations[0].track
         self.assertEqual(toxic.name, "Toxic")
-        self.assertEqual(len(toxic.playlists), 2)
+        self.assertEqual(len(toxic.playlist_associations), 2)
         self.assertEqual(toxic.album.name, "In The Zone")
