@@ -38,7 +38,9 @@ class Artist(Base):
     uri = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     tracks = relationship(
-        "Track", back_populates="artist", cascade="all, delete-orphan"
+        "Track",
+        back_populates="artist",
+        cascade="all, delete",
     )
 
     def __repr__(self):
@@ -62,12 +64,18 @@ class Track(Base):
     uri = Column(String, primary_key=True)
     name = Column(String)
     duration = Column(Integer)
-    artist_uri = Column(String, ForeignKey("artist.uri", ondelete="CASCADE"))
+    artist_uri = Column(
+        String, ForeignKey("artist.uri", ondelete="CASCADE"), nullable=False
+    )
     artist = relationship("Artist", back_populates="tracks")
-    album_uri = Column(String, ForeignKey("album.uri", ondelete="CASCADE"))
+    album_uri = Column(
+        String, ForeignKey("album.uri", ondelete="CASCADE"), nullable=False
+    )
     album = relationship("Album", back_populates="tracks")
 
-    playlist_associations = relationship("Association", back_populates="track")
+    playlist_associations = relationship(
+        "Association", back_populates="track", cascade="all, delete"
+    )
 
     def __repr__(self):
         return f"<{self.__class__.__name__} URI: {self.uri}, NAME: {self.name}>"
@@ -86,7 +94,9 @@ class Playlist(Base):
 
     pid = Column(Integer, primary_key=True)
     name = Column(String)
-    track_associations = relationship("Association", back_populates="playlist")
+    track_associations = relationship(
+        "Association", back_populates="playlist", cascade="all, delete"
+    )
 
     def __repr__(self):
         return f"<{self.__class__.__name__} ID: {self.pid}, NAME: {self.name}>"
@@ -106,4 +116,4 @@ class Album(Base):
 
     uri = Column(String, primary_key=True)
     name = Column(String)
-    tracks = relationship("Track", back_populates="album")
+    tracks = relationship("Track", back_populates="album", cascade="all, delete")
