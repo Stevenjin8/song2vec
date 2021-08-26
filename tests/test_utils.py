@@ -1,8 +1,10 @@
 """Test utility functions."""
 import unittest
+
 import torch
-from song2vec import utils
 from torch import testing
+
+from song2vec import utils
 
 
 class UtilsTestCase(unittest.TestCase):
@@ -21,17 +23,3 @@ class UtilsTestCase(unittest.TestCase):
             torch.Tensor([[1, 1, 0, 0], [0, 0, 1, 1], [0, 0, 0, 0]]), encoded.to_dense()
         )
         self.assertTrue(encoded.is_sparse)
-
-    def test_create_data(self):
-        """Test that we can create data."""
-        data = (
-            torch.Tensor([[1, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]])
-            .to_sparse()
-            .coalesce()
-        )
-        X, y = utils.create_data_masks(data)
-        expected_X = torch.Tensor([[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 0]])
-        expected_y = torch.Tensor([0, 1, 2])
-        self.assertTrue(X.is_sparse)
-        testing.assert_equal(X.to_dense(), expected_X)
-        testing.assert_equal(y, expected_y)

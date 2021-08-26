@@ -1,15 +1,16 @@
 """Functions to load data into the db. I think a functional approach makes more sense
 when processing data.
 """
-from itertools import chain
 import json
 import os
 import sqlite3
+from itertools import chain
 from typing import Callable, Generator, Iterable, List, Set, Type
 
 import sqlalchemy
 from sqlalchemy import sql
 from tqdm import tqdm
+
 from song2vec import db
 
 from . import settings

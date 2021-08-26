@@ -1,7 +1,8 @@
 """Utility functions and classes."""
-from typing import Tuple, Dict, Hashable, Iterable, List
-from tqdm import tqdm
+from typing import Dict, Hashable, Iterable, List, Tuple
+
 import torch
+from tqdm import tqdm
 
 
 class MultiHotEncoder:

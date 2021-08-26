@@ -3,6 +3,7 @@ import os
 import sqlite3
 
 from click.testing import CliRunner, Result
+
 from song2vec import db
 from song2vec.cli.__main__ import load_playlists
 

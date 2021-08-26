@@ -1,7 +1,9 @@
 """Tests for the continous bag of words model."""
+import unittest
+
 import torch
 from torch import testing
-import unittest
+
 from song2vec.models.continous_bag_of_words import ContinousBagOfWords
 
 

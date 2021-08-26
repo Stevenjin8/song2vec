@@ -3,6 +3,7 @@ https://docs.sqlalchemy.org/en/14/orm/session_transaction.html#joining-a-session
 """
 # pylint: disable=invalid-name
 from song2vec import db
+
 from .utils import AbstractDbTestCase
 
 

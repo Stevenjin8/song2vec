@@ -4,7 +4,9 @@
 import multiprocessing
 
 import click
+from sqlalchemy import inspect
 from sqlalchemy.orm.session import sessionmaker
+
 from song2vec.cli.load import (
     create_albums,
     create_artists,
@@ -14,7 +16,6 @@ from song2vec.cli.load import (
     load_objects,
     remove_unique_tracks,
 )
-from sqlalchemy import inspect
 
 
 @click.group()
