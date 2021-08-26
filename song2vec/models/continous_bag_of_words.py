@@ -62,7 +62,7 @@ class ContinousBagOfWords(nn.Module):
         """
         # The `sum` method doesn't work for sparse tensors.
         context_mean = self.embeddings(context) / (context @ self.ones)
-        probs = self.log_softmax(self.linear(context_mean), dim=1)
+        probs = self.log_softmax(self.linear(context_mean))
         return probs
 
     def create_batch(self, data_point: Tensor) -> Tuple[Tensor, Tensor]:
@@ -70,8 +70,11 @@ class ContinousBagOfWords(nn.Module):
         indices = data_point.indices()
         num_batch_indices = indices.shape[1]
         y = indices[0]
-        hidden_value_indices = torch.vstack(torch.arange(0, num_batch_indices), y)
-        embeddings = self.embeddings(data_point) - self.embeddings(hidden_value_indices)
+        hidden_value_indices = torch.vstack([torch.arange(0, num_batch_indices), y])
+        hidden_values = torch.sparse_coo_tensor(
+            indices=hidden_value_indices, values=torch.ones(num_batch_indices)
+        )
+        embeddings = self.embeddings(data_point) - self.embeddings(hidden_values)
         embeddings = embeddings / (num_batch_indices - 1)
 
         return embeddings, y

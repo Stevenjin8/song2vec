@@ -46,10 +46,15 @@ class TestModelsTestCase(AbstractDbTestCase):
 
         self.tracks = [self.track0, self.track1]
 
-        self.playlist_kwargs = {"pid": 5, "name": "musical", "tracks": self.tracks}
+        self.playlist_kwargs = {"pid": 5, "name": "musical"}
         self.playlist = db.Playlist(**self.playlist_kwargs)
+        self.associations = [
+            db.Association(playlist=self.playlist, track=track) for track in self.tracks
+        ]
 
-        self.session.add_all((self.artist, self.album, *self.tracks, self.playlist))
+        self.session.add_all(
+            (self.artist, self.album, *self.tracks, self.playlist, *self.associations)
+        )
         self.session.commit()
 
     def tearDown(self):

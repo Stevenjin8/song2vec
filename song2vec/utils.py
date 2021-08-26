@@ -37,7 +37,7 @@ class MultiHotEncoder:
         indices = torch.zeros(2, num_indices)
 
         current_index = 0
-        for i, x_i in enumerate(tqdm(token_lists)):
+        for i, x_i in enumerate(token_lists):
             for t in x_i:
                 indices[0][current_index] = i
                 indices[1][current_index] = self.indices[t]
