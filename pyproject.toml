@@ -34,3 +34,6 @@ song2vec = 'song2vec.cli.__main__:cli'
 
 [tool.pylint]
 generated-members = ["torch.*"]
+
+[tool.coverage.run]
+include = ["tests/**.py", "song2vec/**.py"]
