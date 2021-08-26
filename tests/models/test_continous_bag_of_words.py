@@ -14,8 +14,8 @@ class ContinousBagOfWordsTestCase(unittest.TestCase):
 
     def setUp(self):
         super().setUpClass()
-        self.vocab_size = 2000
-        self.embedding_dim = 2
+        self.vocab_size = 5
+        self.embedding_dim = 4
         self.model = ContinousBagOfWords(
             vocab_size=self.vocab_size, embedding_dim=self.embedding_dim
         )
@@ -42,3 +42,23 @@ class ContinousBagOfWordsTestCase(unittest.TestCase):
         output = self.model(context)
         self.assertEqual(output.shape, (num_examples, self.vocab_size))
         testing.assert_allclose(torch.ones(num_examples), torch.exp(output).sum(axis=1))
+
+    def test_create_batch(self):
+        """Test that we can create a batch of data from a single bag."""
+        data_point = torch.tensor([0.0, 0.0, 1.0, 1.0, 1.0]).to_sparse()
+        expected_y = torch.tensor([2, 3, 4])
+        expected_embeddings = (
+            self.model.embeddings(
+                torch.tensor(
+                    [
+                        [0.0, 0.0, 0.0, 1.0, 1.0],
+                        [0.0, 0.0, 1.0, 0.0, 1.0],
+                        [0.0, 0.0, 1.0, 1.0, 0.0],
+                    ]
+                )
+            )
+            / 2
+        )
+        actual_embeddings, actual_y = self.model.create_batch(data_point=data_point)
+        testing.assert_equal(actual_y, expected_y)
+        testing.assert_allclose(actual_embeddings, expected_embeddings)
