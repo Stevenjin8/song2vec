@@ -36,22 +36,34 @@ def cli():
     help="URL to the database for Sqlalchemy (e.g. sqlite:///data/db)",
 )
 @click.option(
-    "--remove-unique/--no-remove-unique",
+    "--remove-single/--no-remove-single",
     type=bool,
     default=False,
     help="Make sure all tracks appear in multiple playlists and that all playlists have multiple tracks.",
 )
-def load_playlists(raw_data_dir: str, db_url: str, remove_unique: bool):
+def load_playlists(raw_data_dir: str, db_url: str, remove_single: bool):
     """Load the Million Playlist Dataset into a SQLite database."""
+    import logging
+
     import sqlalchemy
     from song2vec import db
 
     from . import load
 
     # Set up connection
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(
+        format="%(asctime)s:%(levelname)s:%(name)s:%(message)s", level=logging.INFO
+    )
+    logging.info("Connecting to db...")
     engine = sqlalchemy.create_engine(db_url)
-    db.Base.metadata.create_all(engine)
+    logging.info("Done connecting to db!")
 
+    logging.info("Creating tables...")
+    db.Base.metadata.create_all(engine)
+    logging.info("Done creating tables!")
+
+    logging.info("Loading data...")
     # Create processes to read files and upload objects. Note that SQLite allows for
     # nonexistent foreign keys, which is why we can upload everything at the same time
     # without integrity errors.
@@ -91,14 +103,19 @@ def load_playlists(raw_data_dir: str, db_url: str, remove_unique: bool):
 
     for process in processes:
         process.join()
+    logging.info("Done loading data!")
 
+    logging.info("Creating indices...")
     playlist_id_index = sqlalchemy.Index("playlist_id", db.Association.playlist_id)
     track_uri_index = sqlalchemy.Index("track_uri", db.Association.track_uri)
     playlist_id_index.create(bind=engine)
     track_uri_index.create(bind=engine)
+    logging.info("Done creating indices!")
 
-    if remove_unique:
+    if remove_single:
+        logging.info("Removing single tracks...")
         remove_unique_tracks(sessionmaker(bind=engine)())  # add this as an option.
+        logging.info("Done removing single tracks!")
 
 
 cli.add_command(load_playlists)
