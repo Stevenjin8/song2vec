@@ -3,12 +3,9 @@ when processing data.
 """
 import json
 import os
-import sqlite3
-from itertools import chain
 from typing import Callable, Generator, Iterable, List, Set, Type
 
 import sqlalchemy
-from sqlalchemy import sql
 from tqdm import tqdm
 
 from song2vec import db
@@ -147,7 +144,6 @@ def load_objects(
     engine = sqlalchemy.create_engine(db_url, connect_args={"timeout": 10})
     # pylint: disable=invalid-name
     Session = sqlalchemy.orm.sessionmaker(bind=engine)
-    iterators = []
     for slice_path in tqdm(filenames):
         session = Session()
         with open(slice_path) as file:
@@ -156,7 +152,7 @@ def load_objects(
             objs = create_objects(data_slice["playlists"], ids)
         session.bulk_insert_mappings(sqlalchemy.inspect(cls), objs)
         session.commit()
-    session.close()
+        session.close()
 
 
 def remove_unique_tracks(session: sqlalchemy.orm.Session) -> None:
@@ -165,25 +161,39 @@ def remove_unique_tracks(session: sqlalchemy.orm.Session) -> None:
     single_track_query = (
         session.query(db.Association.track_uri)
         .group_by(db.Association.track_uri)
-        .having(sqlalchemy.func.count(db.Association.playlist_id) <= 1)
+        .having(sqlalchemy.func.count(db.Association.playlist_id) == 1)
     )
 
     single_playlist_query = (
-        session.query(db.Association.track_uri)
+        session.query(db.Association.playlist_id)
         .group_by(db.Association.playlist_id)
         .having(sqlalchemy.func.count(db.Association.track_uri) <= 1)
     )
 
     while True:
-        session.query(db.Track).where(db.Track.uri.in_(single_track_query)).delete(
-            synchronize_session="fetch"
-        )
+        session.execute("pragma foreign_keys=on")
+        session.query(db.Track).where(
+            db.Track.uri.in_(single_track_query.subquery().select())
+        ).delete(synchronize_session=False)
         session.query(db.Playlist).where(
-            db.Playlist.pid.in_(single_playlist_query)
-        ).delete(synchronize_session="fetch")
+            db.Playlist.pid.in_(single_playlist_query.subquery().select())
+        ).delete(synchronize_session=False)
 
         session.commit()
         session.flush()
 
         if not single_playlist_query.limit(1).all():
             break
+
+    session.query(db.Playlist).where(
+        ~db.Playlist.pid.in_(
+            session.query(db.Association.playlist_id).distinct().subquery().select()
+        )
+    ).delete(synchronize_session=False)
+    session.query(db.Track).where(
+        ~db.Track.uri.in_(
+            session.query(db.Association.track_uri).distinct().subquery().select()
+        )
+    ).delete(synchronize_session=False)
+    session.flush()
+    session.commit()

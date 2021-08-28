@@ -10,7 +10,7 @@ class MultiHotEncoder:
 
     Attributes:
         vocabulary: Sorted list of the vocabulary.
-        indicies: Quick lookup for indices of each item in the vocabulary.
+        indicis: Quick lookup for indices of each item in the vocabulary.
     """
 
     vocabulary: List[Hashable]
