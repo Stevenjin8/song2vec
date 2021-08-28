@@ -69,6 +69,7 @@ def load_playlists(raw_data_dir: str, db_url: str, remove_single: bool):
     # nonexistent foreign keys, which is why we can upload everything at the same time
     # without integrity errors.
     filenames = load.get_slices(raw_data_dir)
+    num_files = len(filenames)
     processes = []
     processes.append(
         multiprocessing.Process(
@@ -95,10 +96,15 @@ def load_playlists(raw_data_dir: str, db_url: str, remove_single: bool):
     processes.append(
         multiprocessing.Process(
             target=load_objects,
-            args=(db.Association, db_url, filenames, create_associations),
+            args=(db.Association, db_url, filenames[:num_files], create_associations),
         )
     )
-
+    processes.append(
+        multiprocessing.Process(
+            target=load_objects,
+            args=(db.Association, db_url, filenames[num_files:], create_associations),
+        )
+    )
     for process in processes:
         process.start()
 
