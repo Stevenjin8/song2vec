@@ -93,6 +93,7 @@ class TestModelsTestCase(AbstractDbTestCase):
         self.assertEqual(0, self.session.query(db.Track).count())
         self.assertEqual(1, self.session.query(db.Artist).count())
         self.assertEqual(1, self.session.query(db.Playlist).count())
+        self.assertEqual(0, self.session.query(db.Association).count())
         self.session.rollback()
 
         self.session.delete(self.artist)
@@ -100,6 +101,7 @@ class TestModelsTestCase(AbstractDbTestCase):
         self.assertEqual(0, self.session.query(db.Track).count())
         self.assertEqual(0, self.session.query(db.Artist).count())
         self.assertEqual(1, self.session.query(db.Playlist).count())
+        self.assertEqual(0, self.session.query(db.Association).count())
         self.session.rollback()
 
         self.session.delete(self.track1)
@@ -107,6 +109,7 @@ class TestModelsTestCase(AbstractDbTestCase):
         self.assertEqual(1, self.session.query(db.Track).count())
         self.assertEqual(1, self.session.query(db.Artist).count())
         self.assertEqual(1, self.session.query(db.Playlist).count())
+        self.assertEqual(1, self.session.query(db.Association).count())
         self.session.rollback()
 
         self.session.delete(self.playlist)
@@ -114,3 +117,5 @@ class TestModelsTestCase(AbstractDbTestCase):
         self.assertEqual(2, self.session.query(db.Track).count())
         self.assertEqual(1, self.session.query(db.Artist).count())
         self.assertEqual(0, self.session.query(db.Playlist).count())
+        self.assertEqual(0, self.session.query(db.Association).count())
+        self.session.rollback()
