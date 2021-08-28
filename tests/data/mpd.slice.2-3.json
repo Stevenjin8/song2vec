@@ -1,0 +1,33 @@
+{
+    "info": {
+        "generated_on": "2017-12-03 08:41:42.057563",
+        "slice": "2-3",
+        "version": "v1"
+    },
+    "playlists": [
+        {
+            "name": "Throwbacks",
+            "collaborative": "false",
+            "pid": 2,
+            "modified_at": 1093424000,
+            "num_tracks": 1,
+            "num_albums": 1,
+            "num_followers": 1,
+            "tracks": [
+                {
+                    "pos": 1,
+                    "artist_name": "Britney Spears",
+                    "track_uri": "spotify:track:6I9VzXrHxO9rA9A5euc8Ak",
+                    "artist_uri": "spotify:artist:26dSoYclwsYLMAKD3tpOr4",
+                    "track_name": "Toxic",
+                    "album_uri": "spotify:album:0z7pVBGOD7HCIB7S8eLkLI",
+                    "duration_ms": 198800,
+                    "album_name": "In The Zone"
+                }
+            ],
+            "num_edits": 68,
+            "duration_ms": 198800,
+            "num_artists": 1
+        }
+    ]
+}
